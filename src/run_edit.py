@@ -97,10 +97,11 @@ def run_edit_entity_inferences(data,
     if edit_method == 'ft':  # Finetuned on all examples together.
         assert model_name is not None, 'FT: Finetuned model must be provided.'
         # Load a finetuned model.
-        checkpoint = f'/mnt/data1/yasu/newent/ft_outputs/{model_name}/'\
-                     'model_files'
+        # checkpoint = f'/mnt/data1/yasu/newent/ft_outputs/{model_name}/'\
+                    #  'model_files'
+        checkpoint = train_params['BASE_MODEL']
         print(model_name)
-        if train_params['BASE_MODEL'] == 'gpt-neo-1.3B':
+        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
             edit_func = ft_gpt_entity_inferences
             model_ft = GPTNeoForCausalLM.from_pretrained(checkpoint)
         elif train_params['BASE_MODEL'] == 't5-large':
@@ -518,11 +519,12 @@ def run_edit_ecbd(data,
 
     # Select edit function.
     if edit_method == 'ft':
-        assert model_name is not None, 'FT: Finetuned model must be provided.'
+        # assert model_name is not None, 'FT: Finetuned model must be provided.'
         # Load a finetuned model.
-        checkpoint = f'/mnt/data1/yasu/newent/ft_outputs/{model_name}/'\
-                     'model_files'
-        print(model_name)
+        # checkpoint = f'/mnt/data1/yasu/newent/ft_outputs/{model_name}/'\
+        #              'model_files'
+        checkpoint = train_params['BASE_MODEL']
+        # print(model_name)
         if train_params['BASE_MODEL'] == 'gpt-neo-1.3B':
             edit_func = ft_gpt_ecbd
             model_ft = GPTNeoForCausalLM.from_pretrained(checkpoint)
@@ -593,317 +595,343 @@ def run_edit_ecbd(data,
             specificity_data]
 
     all_outputs = []
+    total_epochs=5
+    steps=0
 
-    with alive_bar(total=len(data)) as bar:
+    for epoch in total_epochs: 
+    
+        with alive_bar(total=len(data)) as bar:
 
-        for i, ent in enumerate(data[:]):
+            for i, ent in enumerate(data[:]):
 
-            # specificity_batches = None
-            # if train_params['COMPUTE_SPECIFICITY']:
-            #     other_entities = [ent for j, ent in enumerate(data) if i != j]
-            #     specificity_batches = []
-            #     for _ent in random.sample(other_entities, 10):
-            #         ent_id, examples = _ent
-            #         specificity_batches += [
-            #             to_tsr(tokenizer, ex, device) for ex in examples]
+                # specificity_batches = None
+                # if train_params['COMPUTE_SPECIFICITY']:
+                #     other_entities = [ent for j, ent in enumerate(data) if i != j]
+                #     specificity_batches = []
+                #     for _ent in random.sample(other_entities, 10):
+                #         ent_id, examples = _ent
+                #         specificity_batches += [
+                #             to_tsr(tokenizer, ex, device) for ex in examples]
 
-            # ex contains multiple probe sentences.
-            ent_id, examples = ent
-            ex_for_finetuning = examples[0]  # Take the first one
+                # ex contains multiple probe sentences.
+                steps += 1
+                
+                ent_id, examples = ent
+                ex_for_finetuning = examples[0]  # Take the first one
 
-            if oracle_ft:
-                random.shuffle(examples)
-                n_ex = len(examples) // 2
-                if n_ex:
-                    ex_for_training = examples[:n_ex]
-                    ex_for_testing = examples[n_ex:]
-                    ex_for_finetuning = ex_for_training[0]  # Dummy
-                    ex_for_finetuning['definition'] = \
-                    ex_for_finetuning['probe_sentences']['template_0'][
-                        'probe_sentence']
-                    ex_for_finetuning['def_target'] = \
-                    ex_for_finetuning['probe_sentences']['template_0']['label']
-                    ex_for_finetuning['additional_sentences'] = []
-                    for _ex in ex_for_training[1:]:
-                        ex_for_finetuning['additional_sentences'].append(
-                            [
-                                _ex['probe_sentences']['template_0'][
-                                    'probe_sentence'],
-                                _ex['probe_sentences']['template_0']['label']
-                            ]
-                        )
-                    examples = ex_for_testing
-                else:
-                    continue
-
-            if edit_method == 'ft_per_ex':
-                # Finetune a model
-                model_ft = copy.deepcopy(model_raw)
-                model_ft = model_ft.to(device)
-                model_ft, loss = finetuning(
-                    model_ft,
-                    tokenizer,
-                    ex_for_finetuning,
-                    train_params,
-                    device,
-                    specificity_batches=specificity_batches,
-                    alpha=train_params['ALPHA'],
-                    reg_type=train_params['REG_TYPE']
-                )  # single instance
-            elif edit_method in ['prepend_def', 'random_def']:
-                model_ft = copy.deepcopy(model_raw)
-                model_ft = model_ft.to(device)
-            elif edit_method in ['mend', 'sanity_check']:
-                pass
-            else:
-                raise
-
-            for ex in examples[:]:
-                output = {'ex_id': ex['ex_id']}
-
-                batch = to_tsr(tokenizer, ex, device)
-                bleu_score = batch['bleu_score']
-                bert_score = batch['bert_score']
-                bleurt_score = batch['bleurt_score']
-                meteor_score = batch['meteor_score']
+                if oracle_ft:
+                    random.shuffle(examples)
+                    n_ex = len(examples) // 2
+                    if n_ex:
+                        ex_for_training = examples[:n_ex]
+                        ex_for_testing = examples[n_ex:]
+                        ex_for_finetuning = ex_for_training[0]  # Dummy
+                        ex_for_finetuning['definition'] = \
+                        ex_for_finetuning['probe_sentences']['template_0'][
+                            'probe_sentence']
+                        ex_for_finetuning['def_target'] = \
+                        ex_for_finetuning['probe_sentences']['template_0']['label']
+                        ex_for_finetuning['additional_sentences'] = []
+                        for _ex in ex_for_training[1:]:
+                            ex_for_finetuning['additional_sentences'].append(
+                                [
+                                    _ex['probe_sentences']['template_0'][
+                                        'probe_sentence'],
+                                    _ex['probe_sentences']['template_0']['label']
+                                ]
+                            )
+                        examples = ex_for_testing
+                    else:
+                        continue
 
                 if edit_method == 'ft_per_ex':
-                    pre_edit_logits, post_edit_logits, \
-                    _, _, \
-                    pre_loc_logits, post_loc_logits, \
-                    _, _ = edit_func(
-                        batch,
-                        model_ft,
-                        model_raw=model_raw,
-                        specificity_batches=specificity_batches)
-                elif edit_method == 'prepend_def':
-                    batch_prepended_def = to_tsr(tokenizer,
-                                                 ex,
-                                                 device,
-                                                 prepend_def=True,
-                                                 prepend_sent=False,
-                                                 random_def=None)
-                    pre_edit_logits, post_edit_logits, \
-                    _, _, \
-                    post_loc_dict, pre_loc_dict = edit_func(
-                        batch,
-                        batch_prepended_def,
-                        model_ft,
-                        dataset_name=dataset_name)
-                elif edit_method == 'random_def':
-                    batch_prepended_def = to_tsr(tokenizer,
-                                                 ex,
-                                                 device,
-                                                 prepend_def=False,
-                                                 prepend_sent=False,
-                                                 random_def=random_def)
-                    pre_edit_logits, post_edit_logits, \
-                    _, _, \
-                    post_loc_dict, pre_loc_dict = edit_func(
-                        batch,
-                        batch_prepended_def,
-                        model_ft,
-                        dataset_name=dataset_name)
-                elif edit_method == 'sanity_check':
-
-                    ex_for_finetuning = copy.deepcopy(ex)
-                    ex_for_finetuning['definition'] = \
-                        ex['probe_sentences']['template_0']['probe_sentence']
-                    ex_for_finetuning['def_target'] = \
-                        ex['probe_sentences']['template_0']['label']
-
+                    # Finetune a model
                     model_ft = copy.deepcopy(model_raw)
                     model_ft = model_ft.to(device)
-                    model_ft, loss = finetuning(model_ft, tokenizer,
-                                                ex_for_finetuning,
-                                                train_params, device)
-
-                    pre_edit_logits, post_edit_logits, \
-                    _, _, \
-                    pre_loc_logits, post_loc_logits, \
-                    _, _ = edit_func(
-                        batch,
+                    model_ft, loss = finetuning(
                         model_ft,
-                        model_raw=model_raw,
-                        specificity_batches=specificity_batches)
-                elif edit_method == 'mend':
-                    pre_edit_logits, post_edit_logits, \
-                    _, _, \
-                    pre_loc_logits, post_loc_logits, \
-                    _, _ = edit_func(
-                        batch,
-                        mend_model,
+                        tokenizer,
+                        ex_for_finetuning,
+                        train_params,
+                        device,
                         specificity_batches=specificity_batches,
-                        dataset_name=dataset_name)
+                        alpha=train_params['ALPHA'],
+                        reg_type=train_params['REG_TYPE']
+                    )  # single instance
+                elif edit_method in ['prepend_def', 'random_def']:
+                    model_ft = copy.deepcopy(model_raw)
+                    model_ft = model_ft.to(device)
+                elif edit_method in ['mend', 'sanity_check']:
+                    pass
+                elif edit_method='ft':
+                    model_ft, loss = finetuning(
+                        model_ft,
+                        tokenizer,
+                        ex_for_finetuning,
+                        train_params,
+                        device,
+                        specificity_batches=specificity_batches,
+                        alpha=train_params['ALPHA'],
+                        reg_type=train_params['REG_TYPE']
+                    )
                 else:
-                    raise
+                    raise NotImplementedError
 
-                assert len(batch["edit_inner"]) == 1, len(batch["edit_inner"])
+                for ex in examples[:]:
+                    output = {'ex_id': ex['ex_id']}
 
-                j = 0
-                # Assuming only 1 probe sentence.
-                if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+                    batch = to_tsr(tokenizer, ex, device)
+                    bleu_score = batch['bleu_score']
+                    bert_score = batch['bert_score']
+                    bleurt_score = batch['bleurt_score']
+                    meteor_score = batch['meteor_score']
 
-                    results_specificity = None
+                    if edit_method == 'ft_per_ex':
+                        pre_edit_logits, post_edit_logits, \
+                        _, _, \
+                        pre_loc_logits, post_loc_logits, \
+                        _, _ = edit_func(
+                            batch,
+                            model_ft,
+                            model_raw=model_raw,
+                            specificity_batches=specificity_batches)
+                    elif edit_method == 'ft':
+                        pre_edit_logits, post_edit_logits, \
+                        _, _, \
+                        pre_loc_logits, post_loc_logits, \
+                        _, _ = edit_func(
+                            batch,
+                            model_ft,
+                            model_raw=model_raw,
+                            specificity_batches=specificity_batches)
+                    elif edit_method == 'prepend_def':
+                        batch_prepended_def = to_tsr(tokenizer,
+                                                    ex,
+                                                    device,
+                                                    prepend_def=True,
+                                                    prepend_sent=False,
+                                                    random_def=None)
+                        pre_edit_logits, post_edit_logits, \
+                        _, _, \
+                        post_loc_dict, pre_loc_dict = edit_func(
+                            batch,
+                            batch_prepended_def,
+                            model_ft,
+                            dataset_name=dataset_name)
+                    elif edit_method == 'random_def':
+                        batch_prepended_def = to_tsr(tokenizer,
+                                                    ex,
+                                                    device,
+                                                    prepend_def=False,
+                                                    prepend_sent=False,
+                                                    random_def=random_def)
+                        pre_edit_logits, post_edit_logits, \
+                        _, _, \
+                        post_loc_dict, pre_loc_dict = edit_func(
+                            batch,
+                            batch_prepended_def,
+                            model_ft,
+                            dataset_name=dataset_name)
+                    elif edit_method == 'sanity_check':
 
-                    if edit_method in ['prepend_def', 'random_def']:
-                        pre_perp_loss = compute_perplexity_gpt(
-                            tokenizer,
-                            pre_edit_logits,
-                            batch["edit_inner"][j]['probe_sentence'][
-                                'input_ids'],
-                            batch["edit_inner"][j]['probe_sentence'][
-                                'attention_mask'],
-                            batch["edit_inner"][j]['probe_sentence'],
-                            batch["edit_inner"][j]['left_context_ps'],
-                            batch["edit_inner"][j]['right_context_ps']
-                        )
+                        ex_for_finetuning = copy.deepcopy(ex)
+                        ex_for_finetuning['definition'] = \
+                            ex['probe_sentences']['template_0']['probe_sentence']
+                        ex_for_finetuning['def_target'] = \
+                            ex['probe_sentences']['template_0']['label']
 
-                        post_perp_loss = compute_perplexity_gpt(
-                            tokenizer,
-                            post_edit_logits,
-                            batch_prepended_def["edit_inner"][j][
-                                'probe_sentence']['input_ids'],
-                            batch_prepended_def["edit_inner"][j][
-                                'probe_sentence']['attention_mask'],
-                            batch_prepended_def["edit_inner"][j][
-                                'probe_sentence'],
-                            batch_prepended_def["edit_inner"][j][
-                                'left_context_ps'],
-                            batch_prepended_def["edit_inner"][j][
-                                'right_context_ps']
-                        )
+                        model_ft = copy.deepcopy(model_raw)
+                        model_ft = model_ft.to(device)
+                        model_ft, loss = finetuning(model_ft, tokenizer,
+                                                    ex_for_finetuning,
+                                                    train_params, device)
 
+                        pre_edit_logits, post_edit_logits, \
+                        _, _, \
+                        pre_loc_logits, post_loc_logits, \
+                        _, _ = edit_func(
+                            batch,
+                            model_ft,
+                            model_raw=model_raw,
+                            specificity_batches=specificity_batches)
+                    elif edit_method == 'mend':
+                        pre_edit_logits, post_edit_logits, \
+                        _, _, \
+                        pre_loc_logits, post_loc_logits, \
+                        _, _ = edit_func(
+                            batch,
+                            mend_model,
+                            specificity_batches=specificity_batches,
+                            dataset_name=dataset_name)
                     else:
-                        pre_perp_loss = compute_perplexity_gpt(
-                            tokenizer,
-                            pre_edit_logits,
-                            batch["edit_inner"][j]['labels']['input_ids'],
-                            batch["edit_inner"][j]['labels']['attention_mask'],
-                            batch["edit_inner"][j]['labels'],
-                            batch["edit_inner"][j]['left_context_ps'],
-                            batch["edit_inner"][j]['right_context_ps']
-                        )
+                        raise NotImplementedError
 
-                        post_perp_loss = compute_perplexity_gpt(
-                            tokenizer,
-                            post_edit_logits,
-                            batch["edit_inner"][j]['labels']['input_ids'],
-                            batch["edit_inner"][j]['labels']['attention_mask'],
-                            batch["edit_inner"][j]['labels'],
-                            batch["edit_inner"][j]['left_context_ps'],
-                            batch["edit_inner"][j]['right_context_ps']
-                        )
+                    assert len(batch["edit_inner"]) == 1, len(batch["edit_inner"])
+
+                    j = 0
+                    # Assuming only 1 probe sentence.
+                    if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+
+                        results_specificity = None
+
+                        if edit_method in ['prepend_def', 'random_def']:
+                            pre_perp_loss = compute_perplexity_gpt(
+                                tokenizer,
+                                pre_edit_logits,
+                                batch["edit_inner"][j]['probe_sentence'][
+                                    'input_ids'],
+                                batch["edit_inner"][j]['probe_sentence'][
+                                    'attention_mask'],
+                                batch["edit_inner"][j]['probe_sentence'],
+                                batch["edit_inner"][j]['left_context_ps'],
+                                batch["edit_inner"][j]['right_context_ps']
+                            )
+
+                            post_perp_loss = compute_perplexity_gpt(
+                                tokenizer,
+                                post_edit_logits,
+                                batch_prepended_def["edit_inner"][j][
+                                    'probe_sentence']['input_ids'],
+                                batch_prepended_def["edit_inner"][j][
+                                    'probe_sentence']['attention_mask'],
+                                batch_prepended_def["edit_inner"][j][
+                                    'probe_sentence'],
+                                batch_prepended_def["edit_inner"][j][
+                                    'left_context_ps'],
+                                batch_prepended_def["edit_inner"][j][
+                                    'right_context_ps']
+                            )
+
+                        else:
+                            pre_perp_loss = compute_perplexity_gpt(
+                                tokenizer,
+                                pre_edit_logits,
+                                batch["edit_inner"][j]['labels']['input_ids'],
+                                batch["edit_inner"][j]['labels']['attention_mask'],
+                                batch["edit_inner"][j]['labels'],
+                                batch["edit_inner"][j]['left_context_ps'],
+                                batch["edit_inner"][j]['right_context_ps']
+                            )
+
+                            post_perp_loss = compute_perplexity_gpt(
+                                tokenizer,
+                                post_edit_logits,
+                                batch["edit_inner"][j]['labels']['input_ids'],
+                                batch["edit_inner"][j]['labels']['attention_mask'],
+                                batch["edit_inner"][j]['labels'],
+                                batch["edit_inner"][j]['left_context_ps'],
+                                batch["edit_inner"][j]['right_context_ps']
+                            )
+
+                            pre_edit_logits = None
+                            post_edit_logits = None
+
+                            if train_params['COMPUTE_SPECIFICITY']:
+                                results_specificity = []
+                                assert len(specificity_batches) == len(
+                                    pre_loc_logits) \
+                                    == len(post_loc_logits)
+                                for k in range(len(specificity_batches)):
+                                    s_batch = specificity_batches[k]
+                                    s_pre_perp_loss = compute_perplexity_gpt(
+                                        tokenizer,
+                                        pre_loc_logits[k],
+                                        s_batch["edit_inner"][0]['labels'][
+                                            'input_ids'],
+                                        s_batch["edit_inner"][0]['labels'][
+                                            'attention_mask'],
+                                        s_batch["edit_inner"][0]['labels'],
+                                        s_batch["edit_inner"][0]['left_context_ps'],
+                                        s_batch["edit_inner"][0]['right_context_ps']
+                                    )
+
+                                    s_post_perp_loss = compute_perplexity_gpt(
+                                        tokenizer,
+                                        post_loc_logits[k],
+                                        s_batch["edit_inner"][0]['labels'][
+                                            'input_ids'],
+                                        s_batch["edit_inner"][0]['labels'][
+                                            'attention_mask'],
+                                        s_batch["edit_inner"][0]['labels'],
+                                        s_batch["edit_inner"][0]['left_context_ps'],
+                                        s_batch["edit_inner"][0]['right_context_ps']
+                                    )
+
+                                    results_specificity.append(
+                                        {'pre': s_pre_perp_loss[0],
+                                        'post': s_post_perp_loss[0]})
+
+                        pre_loc_logits = None
+                        post_loc_logits = None
+
+                    elif train_params['BASE_MODEL'] == 't5-large':
+                        label_ids = batch["edit_inner"][0]['labels']['input_ids']
+                        label_attention_mask = batch["edit_inner"][0]['labels'][
+                            'attention_mask']
+                        pre_perp_loss = compute_perplexity_t5(tokenizer,
+                                                            pre_edit_logits,
+                                                            label_ids,
+                                                            label_attention_mask)
+                        post_perp_loss = compute_perplexity_t5(tokenizer,
+                                                            post_edit_logits,
+                                                            label_ids,
+                                                            label_attention_mask)
 
                         pre_edit_logits = None
                         post_edit_logits = None
 
+                        results_specificity = None
                         if train_params['COMPUTE_SPECIFICITY']:
                             results_specificity = []
-                            assert len(specificity_batches) == len(
-                                pre_loc_logits) \
-                                   == len(post_loc_logits)
+                            assert len(specificity_batches) == len(pre_loc_logits) \
+                                == len(post_loc_logits)
                             for k in range(len(specificity_batches)):
                                 s_batch = specificity_batches[k]
-                                s_pre_perp_loss = compute_perplexity_gpt(
+                                s_pre_perp_loss = compute_perplexity_t5(
                                     tokenizer,
                                     pre_loc_logits[k],
                                     s_batch["edit_inner"][0]['labels'][
                                         'input_ids'],
                                     s_batch["edit_inner"][0]['labels'][
-                                        'attention_mask'],
-                                    s_batch["edit_inner"][0]['labels'],
-                                    s_batch["edit_inner"][0]['left_context_ps'],
-                                    s_batch["edit_inner"][0]['right_context_ps']
+                                        'attention_mask']
                                 )
 
-                                s_post_perp_loss = compute_perplexity_gpt(
+                                s_post_perp_loss = compute_perplexity_t5(
                                     tokenizer,
                                     post_loc_logits[k],
                                     s_batch["edit_inner"][0]['labels'][
                                         'input_ids'],
                                     s_batch["edit_inner"][0]['labels'][
-                                        'attention_mask'],
-                                    s_batch["edit_inner"][0]['labels'],
-                                    s_batch["edit_inner"][0]['left_context_ps'],
-                                    s_batch["edit_inner"][0]['right_context_ps']
+                                        'attention_mask']
                                 )
 
                                 results_specificity.append(
                                     {'pre': s_pre_perp_loss[0],
-                                     'post': s_post_perp_loss[0]})
+                                    'post': s_post_perp_loss[0]})
 
-                    pre_loc_logits = None
-                    post_loc_logits = None
+                        pre_loc_logits = None
+                        post_loc_logits = None
 
-                elif train_params['BASE_MODEL'] == 't5-large':
-                    label_ids = batch["edit_inner"][0]['labels']['input_ids']
-                    label_attention_mask = batch["edit_inner"][0]['labels'][
-                        'attention_mask']
-                    pre_perp_loss = compute_perplexity_t5(tokenizer,
-                                                          pre_edit_logits,
-                                                          label_ids,
-                                                          label_attention_mask)
-                    post_perp_loss = compute_perplexity_t5(tokenizer,
-                                                           post_edit_logits,
-                                                           label_ids,
-                                                           label_attention_mask)
+                    else:
+                        raise NotImplementedError
 
-                    pre_edit_logits = None
-                    post_edit_logits = None
+                    output['pre'] = pre_perp_loss[0]
+                    output['post'] = post_perp_loss[0]
+                    output['sim_scores'] = {
+                        'bleu_score': bleu_score,
+                        'bert_score': bert_score,
+                        'bleurt_score': bleurt_score,
+                        'meteor_score': meteor_score
+                    }
+                    output['specificity'] = results_specificity
+                    all_outputs.append(output)
+                    if not pre_perp_loss[0][1]:
+                        print('WARNING')
+                        print('Example:', ex)
+                        print('pre_perp_loss', pre_perp_loss)
+                        print('post_perp_loss', post_perp_loss)
 
-                    results_specificity = None
-                    if train_params['COMPUTE_SPECIFICITY']:
-                        results_specificity = []
-                        assert len(specificity_batches) == len(pre_loc_logits) \
-                               == len(post_loc_logits)
-                        for k in range(len(specificity_batches)):
-                            s_batch = specificity_batches[k]
-                            s_pre_perp_loss = compute_perplexity_t5(
-                                tokenizer,
-                                pre_loc_logits[k],
-                                s_batch["edit_inner"][0]['labels'][
-                                    'input_ids'],
-                                s_batch["edit_inner"][0]['labels'][
-                                    'attention_mask']
-                            )
-
-                            s_post_perp_loss = compute_perplexity_t5(
-                                tokenizer,
-                                post_loc_logits[k],
-                                s_batch["edit_inner"][0]['labels'][
-                                    'input_ids'],
-                                s_batch["edit_inner"][0]['labels'][
-                                    'attention_mask']
-                            )
-
-                            results_specificity.append(
-                                {'pre': s_pre_perp_loss[0],
-                                 'post': s_post_perp_loss[0]})
-
-                    pre_loc_logits = None
-                    post_loc_logits = None
-
-                else:
-                    raise NotImplementedError
-
-                output['pre'] = pre_perp_loss[0]
-                output['post'] = post_perp_loss[0]
-                output['sim_scores'] = {
-                    'bleu_score': bleu_score,
-                    'bert_score': bert_score,
-                    'bleurt_score': bleurt_score,
-                    'meteor_score': meteor_score
-                }
-                output['specificity'] = results_specificity
-                all_outputs.append(output)
-                if not pre_perp_loss[0][1]:
-                    print('WARNING')
-                    print('Example:', ex)
-                    print('pre_perp_loss', pre_perp_loss)
-                    print('post_perp_loss', post_perp_loss)
-
-            bar()
+                bar()
 
     return all_outputs
 
