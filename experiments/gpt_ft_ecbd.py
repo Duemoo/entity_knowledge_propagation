@@ -5,22 +5,23 @@ import sys
 import pickle
 from scipy import stats
 
-sys.path.append('/mnt/data1/yasu/knowledge_injection/code')
+sys.path.append('/workspace/entity_knowledge_propagation')
+
 from transformers import set_seed
 from src import metrics
 from src import run_edit
 from src import data_utils
 
-ROOT_DIR = '/mnt/data1/yasu/knowledge_injection/code'
+ROOT_DIR = '/workspace/entity_knowledge_propagation'
 
 def main(epoch):
 
     # Choose from 'ft_per_ex', 'ft', 'prepend_def'
-    ki_method = 'ft_per_ex'
+    ki_method = 'ft'
 
     # Pretrained model. Use this together with 'ft'.
     ft_model_name = None
-    model_info = 'ft_per_ex_ecbd'
+    model_info = 'ft_ecbd_unfreeze'
 
     # Choose a unique experiment name
     #exp_name = f'ecbd/gpt/final/{ki_method}_{model_info}'
@@ -59,7 +60,7 @@ def main(epoch):
         "MEMORY_RETRIEVAL": False,
         "TRAIN_ON_PROBE": False,
         "COMPUTE_SPECIFICITY": True,  # Set False if prepend_def
-        "FREEZE_LAYERS": True,
+        "FREEZE_LAYERS": False,
         "REG_TYPE": '',
         "ALPHA": 0.0
     }
