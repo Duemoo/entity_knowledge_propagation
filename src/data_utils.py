@@ -23,7 +23,8 @@ CATEGORY_MAP = {
 
 MEND_DIR = './src/mend'
 MEND_MODEL_DIR = './src/mend/trained_models'
-SPECIFICITY_DATA_PATH = './data/ecbd/specificity_popular_20np_20random.json'
+SPECIFICITY_DATA_PATH = './data/ecbd/all_ent_2020_2021_np_easy.json'
+# SPECIFICITY_DATA_PATH = './data/ecbd/specificity_popular_20np_20random.json'
 POPULAR_ENT_DATA_PATH = './data/ecbd/all_popular.json'
 
 

@@ -595,7 +595,7 @@ def run_edit_ecbd(data,
             specificity_data]
 
     all_outputs = []
-    total_epochs=1
+    total_epochs=5
     steps=0
 
     for epoch in range(total_epochs): 
@@ -915,6 +915,7 @@ def run_edit_ecbd(data,
                     else:
                         raise NotImplementedError
 
+                    output['epoch'] = epoch
                     output['pre'] = pre_perp_loss[0]
                     output['post'] = post_perp_loss[0]
                     output['sim_scores'] = {

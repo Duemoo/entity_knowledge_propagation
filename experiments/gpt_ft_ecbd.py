@@ -21,7 +21,7 @@ def main(epoch):
 
     # Pretrained model. Use this together with 'ft'.
     ft_model_name = None
-    model_info = 'ft_ecbd_unfreeze'
+    model_info = 'ecbd_easy_gpt2-large_5epochs'
 
     # Choose a unique experiment name
     #exp_name = f'ecbd/gpt/final/{ki_method}_{model_info}'
@@ -34,8 +34,9 @@ def main(epoch):
     data_dir = os.path.join(ROOT_DIR, 'data')
 
     data_files = [
-        os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_500samples.json'),
-        os.path.join(data_dir, 'ecbd/all_ent_2020_2021_random_500samples.json')
+        # os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_500samples.json'),
+        # os.path.join(data_dir, 'ecbd/all_ent_2020_2021_random_500samples.json')
+        os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_easy.json')
     ]
 
     train_params = {
@@ -45,7 +46,7 @@ def main(epoch):
         "BASE_MODEL": "gpt2-large", #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
         "TRAIN_BATCH_SIZE": 1,  # training batch size
         "VALID_BATCH_SIZE": 1,  # validation batch size
-        "TRAIN_EPOCHS": epoch,  # number of training epochs
+        "TRAIN_EPOCHS": 1,  # number of training epochs
         "VAL_EPOCHS": 1,  # number of validation epochs
         "LEARNING_RATE": 3e-6,  # learning rate 3e-6
         "MAX_SOURCE_TEXT_LENGTH": 128,  # max length of source text
@@ -60,7 +61,7 @@ def main(epoch):
         "MEMORY_RETRIEVAL": False,
         "TRAIN_ON_PROBE": False,
         "COMPUTE_SPECIFICITY": True,  # Set False if prepend_def
-        "FREEZE_LAYERS": True,
+        "FREEZE_LAYERS": False,
         "REG_TYPE": '',
         "ALPHA": 0.0
     }
@@ -198,5 +199,5 @@ def main(epoch):
 
 if __name__ == '__main__':
 
-    for epoch in [5]:
+    for epoch in [1]:
         main(epoch)
