@@ -62,9 +62,9 @@ def run_edit_entity_inferences(data,
                            for p in ['encoder.block.23.layer',
                                      'decoder.block.23.layer']):  # Last layer
                     param.requires_grad = False
-    elif train_params['BASE_MODEL'] == 'gpt2-xl':
-        model_raw = GPT2LMHeadModel.from_pretrained('gpt2-xl')
-        tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl')
+    elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
+        model_raw = GPT2LMHeadModel.from_pretrained(train_params['BASE_MODEL'])
+        tokenizer = GPT2Tokenizer.from_pretrained(train_params['BASE_MODEL'])
         tokenizer.pad_token = tokenizer.eos_token
         to_tsr = to_tsr_gpt_entity_inference
         if train_params['FREEZE_LAYERS']:
@@ -101,7 +101,7 @@ def run_edit_entity_inferences(data,
                     #  'model_files'
         checkpoint = train_params['BASE_MODEL']
         print(model_name)
-        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
             edit_func = ft_gpt_entity_inferences
             model_ft = GPTNeoForCausalLM.from_pretrained(checkpoint)
         elif train_params['BASE_MODEL'] == 't5-large':
@@ -112,13 +112,13 @@ def run_edit_entity_inferences(data,
                 'Currently, we use either GPT-Neo or T5.')
         model_ft = model_ft.to(device)
     elif edit_method == 'ft_per_ex':
-        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
             edit_func = ft_gpt_entity_inferences
         elif train_params['BASE_MODEL'] == 't5-large':
             edit_func = ft_t5_entity_inferences
     elif edit_method in ['prepend_def', 'prepend_sent', 'random_def',
                          'sanity_check']:
-        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
             edit_func = prepend_def_gpt
         elif train_params['BASE_MODEL'] == 't5-large':
             edit_func = prepend_def_t5
@@ -268,7 +268,7 @@ def run_edit_entity_inferences(data,
 
             j = 0
             # Assuming only 1 probe sentence.
-            if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+            if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
 
                 labels, pre_probs, pre_lls = compute_dist_over_labels_gpt(
                     tokenizer,
@@ -487,9 +487,9 @@ def run_edit_ecbd(data,
                            for p in ['encoder.block.23.layer',
                                      'decoder.block.23.layer']):  # Last layer
                     param.requires_grad = False
-    elif train_params['BASE_MODEL'] == 'gpt2-xl':
-        model_raw = GPT2LMHeadModel.from_pretrained('gpt2-xl')
-        tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl')
+    elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
+        model_raw = GPT2LMHeadModel.from_pretrained(train_params['BASE_MODEL'])
+        tokenizer = GPT2Tokenizer.from_pretrained(train_params['BASE_MODEL'])
         tokenizer.pad_token = tokenizer.eos_token
         to_tsr = to_tsr_gpt_ecbd
         if train_params['FREEZE_LAYERS']:
@@ -531,19 +531,19 @@ def run_edit_ecbd(data,
         elif train_params['BASE_MODEL'] == 't5-large':
             edit_func = ft_t5_ecbd
             model_ft = T5ForConditionalGeneration.from_pretrained(checkpoint)
-        elif train_params['BASE_MODEL'] == 'gpt2-xl':
+        elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
             edit_func = ft_gpt_ecbd
             model_ft = GPT2LMHeadModel.from_pretrained(checkpoint)
         else:
             raise NotImplementedError('Currently, we use either GPT-Neo or T5.')
         model_ft = model_ft.to(device)
     elif edit_method in ['ft_per_ex', 'sanity_check']:
-        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
             edit_func = ft_gpt_ecbd
         elif train_params['BASE_MODEL'] == 't5-large':
             edit_func = ft_t5_ecbd
     elif edit_method in ['prepend_def', 'prepend_sent', 'random_def']:
-        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+        if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
             edit_func = prepend_def_gpt
         elif train_params['BASE_MODEL'] == 't5-large':
             edit_func = prepend_def_t5
@@ -595,10 +595,10 @@ def run_edit_ecbd(data,
             specificity_data]
 
     all_outputs = []
-    total_epochs=5
+    total_epochs=1
     steps=0
 
-    for epoch in total_epochs: 
+    for epoch in range(total_epochs): 
     
         with alive_bar(total=len(data)) as bar:
 
@@ -663,7 +663,7 @@ def run_edit_ecbd(data,
                     model_ft = model_ft.to(device)
                 elif edit_method in ['mend', 'sanity_check']:
                     pass
-                elif edit_method='ft':
+                elif edit_method=='ft':
                     model_ft, loss = finetuning(
                         model_ft,
                         tokenizer,
@@ -770,7 +770,7 @@ def run_edit_ecbd(data,
 
                     j = 0
                     # Assuming only 1 probe sentence.
-                    if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl']:
+                    if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
 
                         results_specificity = None
 
@@ -967,7 +967,7 @@ def run_experiment(ki_method,
                 if train_params["COMPUTE_SPECIFICITY"]:
                     specificity_data = [
                         format_gpt_data(ex) for ex in specificity_data]
-            elif train_params['BASE_MODEL'] == 'gpt2-xl':
+            elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
                 data = [format_gpt2_data(ex) for ex in data]
                 if train_params["COMPUTE_SPECIFICITY"]:
                     specificity_data = [
@@ -989,7 +989,7 @@ def run_experiment(ki_method,
         else:  # Entity Inferences
             if train_params['BASE_MODEL'] == 'gpt-neo-1.3B':
                 data = [format_gpt_data_entity_inferences(ex) for ex in data]
-            elif train_params['BASE_MODEL'] == 'gpt2-xl':
+            elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
                 data = [format_gpt2_data_entity_inferences(ex) for ex in data]
             all_outputs = run_edit_entity_inferences(
                 data,

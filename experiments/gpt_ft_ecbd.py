@@ -42,7 +42,7 @@ def main(epoch):
         "EXP_NAME": exp_name,
         "EXP_DIR": exp_dir,
         "KI_METHOD": ki_method,
-        "BASE_MODEL": "gpt2-xl", #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
+        "BASE_MODEL": "gpt2-large", #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
         "TRAIN_BATCH_SIZE": 1,  # training batch size
         "VALID_BATCH_SIZE": 1,  # validation batch size
         "TRAIN_EPOCHS": epoch,  # number of training epochs
@@ -60,7 +60,7 @@ def main(epoch):
         "MEMORY_RETRIEVAL": False,
         "TRAIN_ON_PROBE": False,
         "COMPUTE_SPECIFICITY": True,  # Set False if prepend_def
-        "FREEZE_LAYERS": False,
+        "FREEZE_LAYERS": True,
         "REG_TYPE": '',
         "ALPHA": 0.0
     }
