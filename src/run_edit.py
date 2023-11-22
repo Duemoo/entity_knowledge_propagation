@@ -498,7 +498,9 @@ def run_edit_ecbd(data,
                     param.requires_grad = False
     else:
         raise NotImplementedError('Currently, we use either GPT-Neo or T5.')
-    model_raw = model_raw.to(device)
+    
+    if edit_method != 'ft':
+        model_raw = model_raw.to(device)
 
     # Check num of params to update.
     param_update = 0
@@ -537,6 +539,10 @@ def run_edit_ecbd(data,
         else:
             raise NotImplementedError('Currently, we use either GPT-Neo or T5.')
         model_ft = model_ft.to(device)
+        
+        # Remove model_raw to save memory (it is not useful in ft mode)
+        model_raw = None
+        
     elif edit_method in ['ft_per_ex', 'sanity_check']:
         if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
             edit_func = ft_gpt_ecbd
@@ -803,15 +809,18 @@ def run_edit_ecbd(data,
                             )
 
                         else:
-                            pre_perp_loss = compute_perplexity_gpt(
-                                tokenizer,
-                                pre_edit_logits,
-                                batch["edit_inner"][j]['labels']['input_ids'],
-                                batch["edit_inner"][j]['labels']['attention_mask'],
-                                batch["edit_inner"][j]['labels'],
-                                batch["edit_inner"][j]['left_context_ps'],
-                                batch["edit_inner"][j]['right_context_ps']
-                            )
+                            if edit_method != 'ft':
+                                pre_perp_loss = compute_perplexity_gpt(
+                                    tokenizer,
+                                    pre_edit_logits,
+                                    batch["edit_inner"][j]['labels']['input_ids'],
+                                    batch["edit_inner"][j]['labels']['attention_mask'],
+                                    batch["edit_inner"][j]['labels'],
+                                    batch["edit_inner"][j]['left_context_ps'],
+                                    batch["edit_inner"][j]['right_context_ps']
+                                )
+                            else:
+                                pre_perp_loss = None
 
                             post_perp_loss = compute_perplexity_gpt(
                                 tokenizer,
@@ -833,17 +842,20 @@ def run_edit_ecbd(data,
                                     == len(post_loc_logits)
                                 for k in range(len(specificity_batches)):
                                     s_batch = specificity_batches[k]
-                                    s_pre_perp_loss = compute_perplexity_gpt(
-                                        tokenizer,
-                                        pre_loc_logits[k],
-                                        s_batch["edit_inner"][0]['labels'][
-                                            'input_ids'],
-                                        s_batch["edit_inner"][0]['labels'][
-                                            'attention_mask'],
-                                        s_batch["edit_inner"][0]['labels'],
-                                        s_batch["edit_inner"][0]['left_context_ps'],
-                                        s_batch["edit_inner"][0]['right_context_ps']
-                                    )
+                                    if edit_method != 'ft':
+                                        s_pre_perp_loss = compute_perplexity_gpt(
+                                            tokenizer,
+                                            pre_loc_logits[k],
+                                            s_batch["edit_inner"][0]['labels'][
+                                                'input_ids'],
+                                            s_batch["edit_inner"][0]['labels'][
+                                                'attention_mask'],
+                                            s_batch["edit_inner"][0]['labels'],
+                                            s_batch["edit_inner"][0]['left_context_ps'],
+                                            s_batch["edit_inner"][0]['right_context_ps']
+                                        )
+                                    else:
+                                        s_pre_perp_loss = None
 
                                     s_post_perp_loss = compute_perplexity_gpt(
                                         tokenizer,
@@ -858,8 +870,8 @@ def run_edit_ecbd(data,
                                     )
 
                                     results_specificity.append(
-                                        {'pre': s_pre_perp_loss[0],
-                                        'post': s_post_perp_loss[0]})
+                                        # {'pre': s_pre_perp_loss[0],
+                                        {'post': s_post_perp_loss[0]})
 
                         pre_loc_logits = None
                         post_loc_logits = None
@@ -916,7 +928,7 @@ def run_edit_ecbd(data,
                         raise NotImplementedError
 
                     output['epoch'] = epoch
-                    output['pre'] = pre_perp_loss[0]
+                    output['pre'] = pre_perp_loss[0] if edit_method!='ft' else None
                     output['post'] = post_perp_loss[0]
                     output['sim_scores'] = {
                         'bleu_score': bleu_score,

@@ -85,9 +85,9 @@ def compute_specificity_ecbd(model_raw, model_ft, specificity_batches):
     pre_loc_logits = []
     post_loc_logits = []
     is_mend = hasattr(model_raw, 'model')
-    name_or_path = model_raw.model.name_or_path if is_mend else \
-        model_raw.name_or_path
-    i = 0
+    # name_or_path = model_raw.model.name_or_path if is_mend else \
+        # model_raw.name_or_path
+    name_or_path = ''
     for s_batch in specificity_batches:
         if 't5' in name_or_path :
             ex = s_batch["edit_inner"][0]['probe_sentence']
@@ -104,10 +104,11 @@ def compute_specificity_ecbd(model_raw, model_ft, specificity_batches):
             ex['labels'] = s_batch["edit_inner"][0]['labels']['input_ids'][
                 0].unsqueeze(0)
         pre_loc_logits.append(
-            model_raw(**ex) if is_mend else model_raw(**ex).logits)
+            # model_raw(**ex) if is_mend else model_raw(**ex).logits)
+            [])
         post_loc_logits.append(
             model_ft(**ex) if is_mend else model_ft(**ex).logits)
-        i += 1
+        # i += 1
     return pre_loc_logits, post_loc_logits
 
 
@@ -229,8 +230,11 @@ def ft_gpt_ecbd(
         0].unsqueeze(0)
 
     # Before edit
-    with torch.no_grad():
-        pre_edit_logits = model_raw(**ex).logits
+    if model_raw != None:
+        with torch.no_grad():
+            pre_edit_logits = model_raw(**ex).logits
+    else:
+        pre_edit_logits = None
 
     with torch.set_grad_enabled(False):
         post_edit_logits = model_ft(**ex).logits
@@ -242,8 +246,9 @@ def ft_gpt_ecbd(
         for i in range(n_probe_labels):
             label = batch["edit_inner"][0]["labels"]['input_ids'][
                 i].unsqueeze(0)
-            pre_edit_dict.append(get_log_probs(
-                pre_edit_logits, label, shift=True))
+            if model_raw != None:
+                pre_edit_dict.append(get_log_probs(
+                    pre_edit_logits, label, shift=True))
             post_edit_dict.append(get_log_probs(
                 post_edit_logits, label, shift=True))
 
