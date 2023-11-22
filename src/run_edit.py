@@ -938,11 +938,11 @@ def run_edit_ecbd(data,
                     }
                     output['specificity'] = results_specificity
                     all_outputs.append(output)
-                    if not pre_perp_loss[0][1]:
-                        print('WARNING')
-                        print('Example:', ex)
-                        print('pre_perp_loss', pre_perp_loss)
-                        print('post_perp_loss', post_perp_loss)
+                    # if not pre_perp_loss[0][1]:
+                    #     print('WARNING')
+                    #     print('Example:', ex)
+                    #     print('pre_perp_loss', pre_perp_loss)
+                    #     print('post_perp_loss', post_perp_loss)
 
                 bar()
 
