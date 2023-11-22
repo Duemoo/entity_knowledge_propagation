@@ -21,7 +21,7 @@ def main(epoch):
 
     # Pretrained model. Use this together with 'ft'.
     ft_model_name = None
-    model_info = 'xl_3e-6'
+    model_info = 'medium_8e-6'
 
     # Choose a unique experiment name
     #exp_name = f'ecbd/gpt/final/{ki_method}_{model_info}'
@@ -43,12 +43,12 @@ def main(epoch):
         "EXP_NAME": exp_name,
         "EXP_DIR": exp_dir,
         "KI_METHOD": ki_method,
-        "BASE_MODEL": "gpt2-xl", #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
+        "BASE_MODEL": "gpt2-medium", #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
         "TRAIN_BATCH_SIZE": 1,  # training batch size
         "VALID_BATCH_SIZE": 1,  # validation batch size
         "TRAIN_EPOCHS": 1,  # number of training epochs
         "VAL_EPOCHS": 1,  # number of validation epochs
-        "LEARNING_RATE": 3e-6,  # learning rate 3e-6
+        "LEARNING_RATE": 8e-6,  # learning rate 3e-6
         "MAX_SOURCE_TEXT_LENGTH": 128,  # max length of source text
         "MAX_TARGET_TEXT_LENGTH": 128,  # max length of target text
         "SEED": 2022,  # set seed for reproducibility

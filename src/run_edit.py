@@ -6,7 +6,7 @@ import types
 import yaml
 from collections import defaultdict
 from alive_progress import alive_bar
-from transformers import GPTNeoForCausalLM, GPT2Tokenizer, GPT2LMHeadModel
+from transformers import GPTNeoForCausalLM, GPT2Tokenizer, GPT2LMHeadModel, AutoModelForCausalLM
 from transformers import T5ForConditionalGeneration, T5Tokenizer, AutoModelForSeq2SeqLM, AutoTokenizer
 from .metrics import compute_perplexity_gpt, compute_perplexity_t5
 from .metrics import compute_dist_over_labels_gpt, compute_dist_over_labels_t5
@@ -496,6 +496,11 @@ def run_edit_ecbd(data,
             for param_name, param in model_raw.named_parameters():
                 if not param_name.startswith('transformer.h.47'):  # Last layer
                     param.requires_grad = False
+    elif 'TinyLlama' in train_params['BASE_MODEL']:
+        model_raw = AutoModelForCausalLM.from_pretrained(train_params['BASE_MODEL'])
+        tokenizer = AutoTokenizer.from_pretrained(train_params['BASE_MODEL'])
+        tokenizer.pad_token = tokenizer.eos_token
+        to_tsr = to_tsr_gpt_ecbd
     else:
         raise NotImplementedError('Currently, we use either GPT-Neo or T5.')
     
@@ -536,6 +541,9 @@ def run_edit_ecbd(data,
         elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
             edit_func = ft_gpt_ecbd
             model_ft = GPT2LMHeadModel.from_pretrained(checkpoint)
+        elif 'TinyLlama' in train_params['BASE_MODEL']:
+            edit_func = ft_gpt_ecbd
+            model_ft = AutoModelForCausalLM.from_pretrained(checkpoint)
         else:
             raise NotImplementedError('Currently, we use either GPT-Neo or T5.')
         model_ft = model_ft.to(device)
@@ -776,7 +784,7 @@ def run_edit_ecbd(data,
 
                     j = 0
                     # Assuming only 1 probe sentence.
-                    if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large']:
+                    if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large'] or 'TinyLlama' in train_params['BASE_MODEL']:
 
                         results_specificity = None
 
@@ -980,7 +988,7 @@ def run_experiment(ki_method,
                 if train_params["COMPUTE_SPECIFICITY"]:
                     specificity_data = [
                         format_gpt_data(ex) for ex in specificity_data]
-            elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
+            elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large'] or 'TinyLlama' in train_params['BASE_MODEL']:
                 data = [format_gpt2_data(ex) for ex in data]
                 if train_params["COMPUTE_SPECIFICITY"]:
                     specificity_data = [

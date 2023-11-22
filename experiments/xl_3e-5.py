@@ -4,6 +4,7 @@ import torch
 import sys
 import pickle
 from scipy import stats
+import argparse
 
 sys.path.append('/workspace/entity_knowledge_propagation')
 
@@ -14,14 +15,14 @@ from src import data_utils
 
 ROOT_DIR = '/workspace/entity_knowledge_propagation'
 
-def main(epoch):
+def main(epoch, args):
 
     # Choose from 'ft_per_ex', 'ft', 'prepend_def'
     ki_method = 'ft'
 
     # Pretrained model. Use this together with 'ft'.
     ft_model_name = None
-    model_info = 'xl_3e-5'
+    model_info = args.exp_name
 
     # Choose a unique experiment name
     #exp_name = f'ecbd/gpt/final/{ki_method}_{model_info}'
@@ -43,12 +44,12 @@ def main(epoch):
         "EXP_NAME": exp_name,
         "EXP_DIR": exp_dir,
         "KI_METHOD": ki_method,
-        "BASE_MODEL": "gpt2-xl", #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
+        "BASE_MODEL": args.base_model, #"gpt2-xl",  # model_type: # t5-base/t5-large, "gpt-neo-1.3B"
         "TRAIN_BATCH_SIZE": 1,  # training batch size
         "VALID_BATCH_SIZE": 1,  # validation batch size
         "TRAIN_EPOCHS": 1,  # number of training epochs
         "VAL_EPOCHS": 1,  # number of validation epochs
-        "LEARNING_RATE": 3e-5,  # learning rate 3e-6
+        "LEARNING_RATE": float(args.lr),  # learning rate 3e-6
         "MAX_SOURCE_TEXT_LENGTH": 128,  # max length of source text
         "MAX_TARGET_TEXT_LENGTH": 128,  # max length of target text
         "SEED": 2022,  # set seed for reproducibility
@@ -203,5 +204,15 @@ def main(epoch):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='Add two numbers.')
+
+    # Add arguments
+    parser.add_argument('--lr', type=str, help='learning rate')
+    parser.add_argument('--exp_name', type=str, help='exp name')
+    parser.add_argument('--base_model', type=str, help='base model')
+
+    # Parse the arguments
+    args = parser.parse_args()
+
     for epoch in [1]:
-        main(epoch)
+        main(epoch, args)
