@@ -487,7 +487,7 @@ def run_edit_ecbd(data,
                            for p in ['encoder.block.23.layer',
                                      'decoder.block.23.layer']):  # Last layer
                     param.requires_grad = False
-    elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
+    elif 'gpt2' in train_params['BASE_MODEL']:
         model_raw = GPT2LMHeadModel.from_pretrained(train_params['BASE_MODEL'])
         tokenizer = GPT2Tokenizer.from_pretrained(train_params['BASE_MODEL'])
         tokenizer.pad_token = tokenizer.eos_token
@@ -538,7 +538,7 @@ def run_edit_ecbd(data,
         elif train_params['BASE_MODEL'] == 't5-large':
             edit_func = ft_t5_ecbd
             model_ft = T5ForConditionalGeneration.from_pretrained(checkpoint)
-        elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
+        elif 'gpt2' in train_params['BASE_MODEL']:
             edit_func = ft_gpt_ecbd
             model_ft = GPT2LMHeadModel.from_pretrained(checkpoint)
         elif 'TinyLlama' in train_params['BASE_MODEL']:
@@ -784,7 +784,7 @@ def run_edit_ecbd(data,
 
                     j = 0
                     # Assuming only 1 probe sentence.
-                    if train_params['BASE_MODEL'] in ['gpt-neo-1.3B', 'gpt2-xl', 'gpt2-large'] or 'TinyLlama' in train_params['BASE_MODEL']:
+                    if 'gpt2' in train_params['BASE_MODEL'] or 'TinyLlama' in train_params['BASE_MODEL']:
 
                         results_specificity = None
 
@@ -988,11 +988,16 @@ def run_experiment(ki_method,
                 if train_params["COMPUTE_SPECIFICITY"]:
                     specificity_data = [
                         format_gpt_data(ex) for ex in specificity_data]
-            elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large'] or 'TinyLlama' in train_params['BASE_MODEL']:
+            elif 'gpt2' in train_params['BASE_MODEL']:
                 data = [format_gpt2_data(ex) for ex in data]
                 if train_params["COMPUTE_SPECIFICITY"]:
                     specificity_data = [
                         format_gpt2_data(ex) for ex in specificity_data]
+            elif 'TinyLlama' in train_params['BASE_MODEL']:
+                data = [format_gpt2_data(ex, pad_token='</s>') for ex in data]
+                if train_params["COMPUTE_SPECIFICITY"]:
+                    specificity_data = [
+                        format_gpt2_data(ex, pad_token='</s>') for ex in specificity_data]
             # For ECBD, we group examples by entities and finetune only once per
             # entity. This is unnecessary for specificity data.
             data = group_examples(data)
@@ -1010,7 +1015,7 @@ def run_experiment(ki_method,
         else:  # Entity Inferences
             if train_params['BASE_MODEL'] == 'gpt-neo-1.3B':
                 data = [format_gpt_data_entity_inferences(ex) for ex in data]
-            elif train_params['BASE_MODEL'] in ['gpt2-xl', 'gpt2-large']:
+            elif 'gpt2' in train_params['BASE_MODEL']:
                 data = [format_gpt2_data_entity_inferences(ex) for ex in data]
             all_outputs = run_edit_entity_inferences(
                 data,

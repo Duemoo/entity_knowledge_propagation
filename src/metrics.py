@@ -134,7 +134,8 @@ def compute_perplexity_gpt(tokenizer, logits, label_ids, label_attention_mask,
         span_len = total_len - left_len - right_len
 
         end_loc = start_loc + span_len
-
+        res = left_context_tsr['input_ids'][0]
+        # print(f'\n\n\n#####################\n{res}\n#########################\n\n\n')
         perplexity = torch.exp(
             (l * shift_label_attention_mask[i])[
             start_loc-1:end_loc-1].mean()).item()

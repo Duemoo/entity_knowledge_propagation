@@ -2,11 +2,12 @@ import pickle as pkl
 import os
 import json
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from collections import defaultdict
 
 
 out_dir = "./output/ecbd/gpt2/final/"
-exp_name = "ft_xl_3e-6"
+exp_name = "ft_medium_8e-6"
 data_file = "./data/ecbd/all_ent_2020_2021_np_easy.json"
 result_file = os.path.join(out_dir, exp_name, 'results.pkl')
 
@@ -88,8 +89,11 @@ for d in data_file:
     ex_ids.append(d['ex_id'])
 group = group_examples(data_file)
 
-results = results['/workspace/entity_knowledge_propagation/data/ecbd/all_ent_2020_2021_np_easy.json']
-
+try:
+    results = results['/data/hoyeon/entity_knowledge_propagation/data/ecbd/all_ent_2020_2021_np_easy.json']
+except:
+    results = results['/workspace/entity_knowledge_propagation/data/ecbd/all_ent_2020_2021_np_easy.json']
+# print(results)
 per_ex = {ex_id: {'ppl': [], 'trained_at': []} for ex_id in ex_ids}
 
 print(train_idx)
@@ -127,7 +131,7 @@ for ent, ex in per_ex.items():
 
 plot_indices = list(range(len(per_ex)))
 # plot_indices = train_idx
-os.makedirs(exp_name, exist_ok=True)
-for i, key in enumerate(per_ex):
+os.makedirs(os.path.join('figures', exp_name), exist_ok=True)
+for i, key in enumerate(tqdm(per_ex)):
     if i in plot_indices:
-        plot_ppl_with_trained_at(per_ex[key], filename=f'{exp_name}/{i}.png')
+        plot_ppl_with_trained_at(per_ex[key], filename=f'figures/{exp_name}/{i}.png')

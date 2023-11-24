@@ -16,7 +16,7 @@ def train(tokenizer, model, device, loader, optimizer, specificity_batches=None,
     losses = []
     for _, data in enumerate(loader, 0):
 
-        if 'gpt' in model.name_or_path:
+        if 'gpt' in model.name_or_path or 'TinyLlama' in model.name_or_path:
             bsize = data['target_ids'].size(0)
             ids = data['input_ids'].to(device, dtype=torch.long)
             mask = data['input_mask'].to(device, dtype=torch.long)
@@ -113,7 +113,7 @@ def train(tokenizer, model, device, loader, optimizer, specificity_batches=None,
 
 def finetuning(model, tokenizer, ex, model_params, device,
                specificity_batches=None, alpha=0.0, reg_type=None):
-    if 'gpt' in model.name_or_path:
+    if 'gpt' in model.name_or_path or 'TinyLlama' in model.name_or_path:
         data_d = {'input_text': [ex['definition']],
                   'target_text': [ex['definition']]}
 
