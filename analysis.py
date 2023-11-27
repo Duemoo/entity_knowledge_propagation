@@ -5,6 +5,21 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from collections import defaultdict
 import argparse
+import statistics
+import numpy as np
+
+
+def remove_outliers_iqr(data, multiplier=2.0):
+    q1 = np.percentile(data, 25)
+    q3 = np.percentile(data, 75)
+    iqr = q3 - q1
+
+    lower_bound = q1 - multiplier * iqr
+    upper_bound = q3 + multiplier * iqr
+
+    filtered_data = [x for x in data if lower_bound <= x <= upper_bound]
+    # print(f"{len(data)-len(filtered_data)}")
+    return filtered_data
 
 
 def load_json(path):
@@ -20,10 +35,6 @@ def group_examples(data):
     return list(data_d.items())
 
 
-def find_idx(ex_ids, ex_id):
-    return ex_ids.index(ex_id)
-
-
 def get_train_idx(data):
     group = group_examples(data)
     # print(group[2])
@@ -36,10 +47,6 @@ def get_train_idx(data):
                 train_indices.append(count)
             count += 1
     return train_indices
-
-
-def reorder_results(results):
-    pass
 
 
 def plot_ppl_with_trained_at(per_exs, key, exp_names, filename='plot.png'):
@@ -97,17 +104,72 @@ def load_results(out_dir, exp_name):
     return results
 
 
+def measure_ppl_drop(per_exs, measure_indices, exclude_pop, remove_ouliers=True):
+    assert len(per_exs)==1
+    per_ex = per_exs[0]
+    avg_ppl_drop_per_ex = []
+    avg_ppl_fluc_per_ex = []
+    overall_ppl_drop_per_ex = []
+    learn_success_count = 0
+    for idx, data in enumerate(per_ex.items()):
+        if 'pop' in data[0] and exclude_pop:
+            continue
+        if idx in measure_indices:
+            ppl_drop_on_train = []
+            ppl_fluc_not_on_train = []
+            train_idx = data[1]['trained_at']
+            ppl = data[1]['ppl']
+
+            for step in range(len(ppl)):
+                if step in train_idx:
+                    if step!=0:
+                        ppl_drop_on_train.append((1-ppl[step]/ppl[step-1])*100)
+                else:
+                    if step!=0:
+                        ppl_fluc_not_on_train.append((1-ppl[step]/ppl[step-1])*100)
+            
+            # ppl_drop_on_train = remove_outliers_iqr(ppl_drop_on_train)
+            if remove_outliers_iqr:
+                ppl_fluc_not_on_train = remove_outliers_iqr(ppl_fluc_not_on_train)
+                ppl_drop_on_train = remove_outliers_iqr(ppl_drop_on_train)
+                
+            avg_ppl_drop_per_ex.append(sum(ppl_drop_on_train)/len(ppl_drop_on_train))
+            avg_ppl_fluc_per_ex.append(sum(ppl_fluc_not_on_train)/len(ppl_fluc_not_on_train))
+            overall_ppl_drop_per_ex.append((1-ppl[-1]/ppl[0])*100)
+        
+    avg_ppl_drop_on_train = sum(avg_ppl_drop_per_ex)/len(avg_ppl_drop_per_ex)
+    avg_ppl_fluc_not_on_train = statistics.pstdev(avg_ppl_fluc_per_ex)
+    
+    if remove_ouliers:
+        overall_ppl_drop_per_ex = remove_outliers_iqr(overall_ppl_drop_per_ex)
+        
+    avg_overall_ppl_drop = sum(overall_ppl_drop_per_ex)/len(overall_ppl_drop_per_ex)
+    
+    result = {
+        'ppl_drop_on_train': (avg_ppl_drop_on_train, avg_ppl_drop_per_ex),
+        'ppl_fluc_not_on_train': (avg_ppl_fluc_not_on_train, avg_ppl_fluc_per_ex),
+        'overall_ppl_drop': avg_overall_ppl_drop
+        }
+    
+    
+    return result
+
+
 def main(args):
 
     # Process data_file
-    dataset = load_json(args.data_file)
+    train_dataset = load_json(args.train_data)
+    valid_dataset = load_json(args.valid_data)
+    # print(len(dataset))
     ex_ids = []
-    for d in dataset:
+    for d in valid_dataset:
         ex_ids.append(d['ex_id'])
-    group = group_examples(dataset)
+    group = group_examples(train_dataset)
+    # print(len(group))
     
     # Process train_idx
-    train_idx = get_train_idx(dataset)
+    train_idx = get_train_idx(train_dataset)
+    # print(len(train_idx))
 
     # Process results.pkl files
     results_list = [load_results(args.out_dir, exp_name) for exp_name in args.exp_name]
@@ -117,41 +179,67 @@ def main(args):
     for results in results_list:
         
         per_ex = {ex_id: {'ppl': [], 'trained_at': []} for ex_id in ex_ids}
+        # print(len(per_ex))
 
         for step, result in enumerate(results):
+            # print(step)
             spec_data = result['specificity']
             for spec_idx, ppl_data in enumerate(spec_data):
+                # print(spec_idx)
                 per_ex[ex_ids[spec_idx]]['ppl'].append(ppl_data['post'][0])
-                
             per_ex[result['ex_id']]['trained_at'].append(step)
+
+        # print([ex['trained_at'] for ex in per_ex.values()])
 
         for ent, ex in per_ex.items():
             new_ppl = []
-            new_trained_at = [find_bin(train_idx, ex['trained_at'][0])+n*65 for n in range(5)]
+            new_trained_at = [find_bin(train_idx, ex['trained_at'][0])+n*len(group) for n in range(5)] if len(ex['trained_at'])!=0 else []
             count = 0
             for idx, ppl in enumerate(ex['ppl']):
-                if idx%len(dataset) in train_idx:
+                if idx%len(train_dataset) in train_idx:
                     new_ppl.append(ppl)
                 # print(idx, count)
                 # print(new_trained_at)
                     
             ex['ppl'] = new_ppl
             ex['trained_at'] = new_trained_at
+            # print(len(new_ppl))
             assert len(new_ppl)%65==0
-            assert len(new_trained_at)==5
+            # assert len(new_trained_at)==5
         # print(per_ex)
         # print(train_idx)
         per_exs.append(per_ex)
 
-    plot_indices = list(range(len(per_ex)))
-    # plot_indices = train_idx
+
+    if args.mode=='draw_figures':
+        plot_indices = list(range(len(per_ex)))
+        # plot_indices = train_idx
+        
+        figure_path = os.path.join('figures/', args.save_dir)
+        os.makedirs(figure_path, exist_ok=True)
+        
+        for i, key in enumerate(tqdm(per_exs[0])):
+            if i in plot_indices:
+                plot_ppl_with_trained_at(per_exs, key, args.exp_name, filename=f'{figure_path}/{i}.png')
     
-    figure_path = os.path.join('figures/', args.save_dir)
-    os.makedirs(figure_path, exist_ok=True)
     
-    for i, key in enumerate(tqdm(per_exs[0])):
-        if i in plot_indices:
-            plot_ppl_with_trained_at(per_exs, key, args.exp_name, filename=f'{figure_path}/{i}.png')
+    elif args.mode=='measure_scores':
+        # measure_indices = list(range(len(per_ex)))
+        measure_indices = [1,3,5,7,8,9,11,15,16,17,20,22,23,25,26,27,29,30,31,32,34,37,39,40,41,43,44,45,46,47,49,51,53,54,55,59,60,62,65,66,70,71,73,76,82,83,84,85,86,89,91,92,97,98,103]
+        result = measure_ppl_drop(per_exs, measure_indices, exclude_pop=True)
+        # assert len(avg_ppl_drop_per_ex)==len(measure_indices)
+        print(f"\n\n################################################################################\n \
+                avg_ppl_drop_per_ex:\n\n{result['ppl_drop_on_train'][1]}\n\n \
+                avg_ppl_drop: {result['ppl_drop_on_train'][0]} \
+                \n\navg_ppl_fluc_per_ex:\n\n{result['ppl_fluc_not_on_train'][1]}\n\n \
+                avg_ppl_fluc: {result['ppl_fluc_not_on_train'][0]}\n\n \
+                overall_ppl_drop: {result['overall_ppl_drop']} \
+                \n################################################################################\n\n")
+        
+    
+    
+    else:
+        raise NotImplementedError
         
         
         
@@ -168,7 +256,9 @@ if __name__ == '__main__':
     parser.add_argument('--out_dir', type=str, default="./output/ecbd/gpt2/final/")
     parser.add_argument('--save_dir', type=str)
     parser.add_argument('--exp_name', nargs='+', required=True)
-    parser.add_argument('--data_file', type=str, default="./data/ecbd/all_ent_2020_2021_np_easy.json")
+    parser.add_argument('--train_data', type=str, default="./data/ecbd/all_ent_2020_2021_np_easy.json")
+    parser.add_argument('--valid_data', type=str, default="./data/ecbd/validation.json")
+    parser.add_argument('--mode', type=str, default="draw_figures")
 
     # Parse the arguments
     args = parser.parse_args()

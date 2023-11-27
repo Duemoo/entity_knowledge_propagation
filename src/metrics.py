@@ -115,7 +115,7 @@ def compute_perplexity_gpt(tokenizer, logits, label_ids, label_attention_mask,
     shift_label_attention_mask = label_attention_mask[..., 1:].contiguous()
     loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)),
                     shift_labels.view(-1))
-
+    # print(f"loss in compute_perplexity_gpt: {loss}")
     batch_size = logits.shape[0]
     perp_loss = []
     for i, l in enumerate(loss.view(batch_size, -1)):
@@ -134,19 +134,9 @@ def compute_perplexity_gpt(tokenizer, logits, label_ids, label_attention_mask,
         span_len = total_len - left_len - right_len
 
         end_loc = start_loc + span_len
-        res = left_context_tsr['input_ids'][0]
-        # print(f'\n\n\n#####################\n{res}\n#########################\n\n\n')
         perplexity = torch.exp(
             (l * shift_label_attention_mask[i])[
             start_loc-1:end_loc-1].mean()).item()
-
-        # print(tokenizer.convert_ids_to_tokens(
-        #         label_ids[i].cpu().detach().numpy().tolist()))
-        # print(l.cpu().detach().numpy())
-        # print(start_loc, end_loc)
-        # print(label_ids.size())
-        # print(l.size())
-
 
         loss_per_token = list(
             zip(tokenizer.convert_ids_to_tokens(
@@ -157,10 +147,8 @@ def compute_perplexity_gpt(tokenizer, logits, label_ids, label_attention_mask,
                 )
         )
 
-        # print(loss_per_token)
-        # print()
-
-        if not loss_per_token:
+        if True:
+        # if not loss_per_token:
             print(total_len, left_len, right_len, start_loc, end_loc)
             print(tokenizer.convert_ids_to_tokens(labels_tsr['input_ids'][i]))
             print(tokenizer.convert_ids_to_tokens(
@@ -169,6 +157,74 @@ def compute_perplexity_gpt(tokenizer, logits, label_ids, label_attention_mask,
                 left_context_tsr['input_ids'][0]))
             print(tokenizer.convert_ids_to_tokens(
                 right_context_tsr['input_ids'][0]))
+
+            print()
+            print(loss_per_token)
+            print()
+
+        perp_loss.append((perplexity, loss_per_token))
+    return perp_loss
+
+
+def compute_perplexity_llama(tokenizer, logits, label_ids, label_attention_mask,
+                           labels_tsr, left_context_tsr, right_context_tsr):
+    loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = label_ids[..., 1:].contiguous()
+    shift_label_attention_mask = label_attention_mask[..., 1:].contiguous()
+    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)),
+                    shift_labels.view(-1))
+    batch_size = logits.shape[0]
+    perp_loss = []
+    for i, l in enumerate(loss.view(batch_size, -1)):
+
+        total_len = \
+        (labels_tsr['input_ids'][i] == tokenizer.eos_token_id).nonzero(
+            as_tuple=True)[0]
+        # left and right contexts are the same for all labels
+        left_len = \
+        (left_context_tsr['input_ids'][0] == tokenizer.eos_token_id).nonzero(
+            as_tuple=True)[0]
+        right_len = \
+        (right_context_tsr['input_ids'][0] == tokenizer.eos_token_id).nonzero(
+            as_tuple=True)[0]-2
+        start_loc = left_len
+        span_len = total_len - left_len - right_len
+
+        end_loc = start_loc + span_len
+        perplexity = torch.exp(
+            (l * shift_label_attention_mask[i])[
+            start_loc-1:end_loc-1].mean()).item()
+
+        loss_per_token = list(
+            zip(tokenizer.convert_ids_to_tokens(
+                label_ids[i].cpu().detach().numpy().tolist())[
+                start_loc:end_loc],
+                [float(s) for s in l.cpu().detach().numpy()[
+                                   start_loc-1:end_loc-1]]  # Shift back by 1
+                )
+        )
+
+        if True:
+        # if not loss_per_token:
+            # print('full label')
+            # print(labels_tsr['input_ids'][0])
+            # print('left_context_tsr')
+            # print(left_context_tsr['input_ids'][0])
+            # print('right_context_tsr')
+            # print(right_context_tsr['input_ids'][0])
+            # len_match=labels_tsr['input_ids'][0].size(0)==left_context_tsr['input_ids'][0].size(0)+right_context_tsr['input_ids'][0]-1
+            # print(f'\nlen_match: {len_match}\n')
+            print()
+            print(total_len, left_len, right_len, start_loc, end_loc)
+            print(tokenizer.convert_ids_to_tokens(labels_tsr['input_ids'][i]))
+            print(tokenizer.convert_ids_to_tokens(
+                labels_tsr['input_ids'][i, start_loc:end_loc]))
+            print(tokenizer.convert_ids_to_tokens(
+                left_context_tsr['input_ids'][0]))
+            print(tokenizer.convert_ids_to_tokens(
+                right_context_tsr['input_ids'][0]))
+            print(right_context_tsr['input_ids'][0])
 
             print()
             print(loss_per_token)

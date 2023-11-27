@@ -106,6 +106,8 @@ def compute_specificity_ecbd(model_raw, model_ft, specificity_batches):
         pre_loc_logits.append(
             # model_raw(**ex) if is_mend else model_raw(**ex).logits)
             [])
+        res = model_ft(**ex).logits
+        assert not torch.isnan(res).any(), "logits in compute_specificity contains NaN values"
         post_loc_logits.append(
             model_ft(**ex) if is_mend else model_ft(**ex).logits)
         # i += 1
@@ -238,6 +240,7 @@ def ft_gpt_ecbd(
 
     with torch.set_grad_enabled(False):
         post_edit_logits = model_ft(**ex).logits
+        assert not torch.isnan(post_edit_logits).any(), "post edit logits contains NaN values"
 
     with torch.no_grad():
         n_probe_labels = batch['edit_inner'][0]['labels']['input_ids'].size(0)
@@ -251,6 +254,8 @@ def ft_gpt_ecbd(
                     pre_edit_logits, label, shift=True))
             post_edit_dict.append(get_log_probs(
                 post_edit_logits, label, shift=True))
+            res = get_log_probs(post_edit_logits, label, shift=True)
+            # assert not torch.isnan(res).any(), "res contains NaN values"
 
     pre_loc_dicts = None
     post_loc_dicts = None

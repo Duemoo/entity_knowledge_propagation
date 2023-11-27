@@ -40,8 +40,10 @@ def train(tokenizer, model, device, loader, optimizer, specificity_batches=None,
                             labels=lm_labels)
 
         loss = outputs[0]
+        assert not torch.isnan(loss).any(), "Loss contains NaN values"
 
         lm_logits = outputs[1]
+        assert not torch.isnan(lm_logits).any(), "Logits contains NaN values"
 
         input_str = [tokenizer.decode(i, skip_special_tokens=True) for i in ids]
 
@@ -53,6 +55,8 @@ def train(tokenizer, model, device, loader, optimizer, specificity_batches=None,
         loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
         per_token_loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)),
                                   lm_labels.view(-1)).view(bsize, -1)
+
+        assert not torch.isnan(per_token_loss).any(), "per_token_loss contains NaN values"
 
         per_token_loss = \
             [per_token_loss[i, :target_len[i] - 1].cpu().detach().numpy() for i
@@ -85,9 +89,11 @@ def train(tokenizer, model, device, loader, optimizer, specificity_batches=None,
                         0].unsqueeze(0)
                     mask = ex['attention_mask']
                 post_logits = model(**ex).logits
+                assert not torch.isnan(post_logits).any(), "Post Logits contains NaN values"
                 pre_logits = pre_specificity_logits[b_idx]
-                print(post_logits)
-                print(pre_logits)
+                assert not torch.isnan(pre_logits).any(), "Pre Logits contains NaN values"
+                # print(post_logits)
+                # print(pre_logits)
                 if reg_type == 'kl':
                     kl_loss_fct = nn.KLDivLoss(
                         reduction="batchmean", log_target=True)

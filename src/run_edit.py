@@ -4,11 +4,12 @@ import os
 import torch
 import types
 import yaml
+import numpy as np
 from collections import defaultdict
 from alive_progress import alive_bar
 from transformers import GPTNeoForCausalLM, GPT2Tokenizer, GPT2LMHeadModel, AutoModelForCausalLM
 from transformers import T5ForConditionalGeneration, T5Tokenizer, AutoModelForSeq2SeqLM, AutoTokenizer
-from .metrics import compute_perplexity_gpt, compute_perplexity_t5
+from .metrics import compute_perplexity_gpt, compute_perplexity_t5, compute_perplexity_llama
 from .metrics import compute_dist_over_labels_gpt, compute_dist_over_labels_t5
 from .trainer import finetuning
 from .edit_func import ft_gpt_entity_inferences, ft_t5_entity_inferences
@@ -501,6 +502,10 @@ def run_edit_ecbd(data,
         tokenizer = AutoTokenizer.from_pretrained(train_params['BASE_MODEL'])
         tokenizer.pad_token = tokenizer.eos_token
         to_tsr = to_tsr_gpt_ecbd
+        if train_params['FREEZE_LAYERS']:
+            for param_name, param in model_raw.named_parameters():
+                if True:  # Last layer
+                    param.requires_grad = False
     else:
         raise NotImplementedError('Currently, we use either GPT-Neo or T5.')
     
@@ -830,15 +835,26 @@ def run_edit_ecbd(data,
                             else:
                                 pre_perp_loss = None
 
-                            post_perp_loss = compute_perplexity_gpt(
-                                tokenizer,
-                                post_edit_logits,
-                                batch["edit_inner"][j]['labels']['input_ids'],
-                                batch["edit_inner"][j]['labels']['attention_mask'],
-                                batch["edit_inner"][j]['labels'],
-                                batch["edit_inner"][j]['left_context_ps'],
-                                batch["edit_inner"][j]['right_context_ps']
-                            )
+                            if 'gpt2' in train_params['BASE_MODEL']:
+                                post_perp_loss = compute_perplexity_gpt(
+                                    tokenizer,
+                                    post_edit_logits,
+                                    batch["edit_inner"][j]['labels']['input_ids'],
+                                    batch["edit_inner"][j]['labels']['attention_mask'],
+                                    batch["edit_inner"][j]['labels'],
+                                    batch["edit_inner"][j]['left_context_ps'],
+                                    batch["edit_inner"][j]['right_context_ps']
+                                )
+                            else: # TinyLlama
+                                post_perp_loss = compute_perplexity_llama(
+                                    tokenizer,
+                                    post_edit_logits,
+                                    batch["edit_inner"][j]['labels']['input_ids'],
+                                    batch["edit_inner"][j]['labels']['attention_mask'],
+                                    batch["edit_inner"][j]['labels'],
+                                    batch["edit_inner"][j]['left_context_ps'],
+                                    batch["edit_inner"][j]['right_context_ps']
+                                )
 
                             pre_edit_logits = None
                             post_edit_logits = None
@@ -865,17 +881,31 @@ def run_edit_ecbd(data,
                                     else:
                                         s_pre_perp_loss = None
 
-                                    s_post_perp_loss = compute_perplexity_gpt(
-                                        tokenizer,
-                                        post_loc_logits[k],
-                                        s_batch["edit_inner"][0]['labels'][
-                                            'input_ids'],
-                                        s_batch["edit_inner"][0]['labels'][
-                                            'attention_mask'],
-                                        s_batch["edit_inner"][0]['labels'],
-                                        s_batch["edit_inner"][0]['left_context_ps'],
-                                        s_batch["edit_inner"][0]['right_context_ps']
-                                    )
+                                    if 'gpt2' in train_params['BASE_MODEL']:                                        
+                                        s_post_perp_loss = compute_perplexity_gpt(
+                                            tokenizer,
+                                            post_loc_logits[k],
+                                            s_batch["edit_inner"][0]['labels'][
+                                                'input_ids'],
+                                            s_batch["edit_inner"][0]['labels'][
+                                                'attention_mask'],
+                                            s_batch["edit_inner"][0]['labels'],
+                                            s_batch["edit_inner"][0]['left_context_ps'],
+                                            s_batch["edit_inner"][0]['right_context_ps']
+                                        )
+                                        
+                                    else: # TinyLlama
+                                        s_post_perp_loss = compute_perplexity_llama(
+                                            tokenizer,
+                                            post_loc_logits[k],
+                                            s_batch["edit_inner"][0]['labels'][
+                                                'input_ids'],
+                                            s_batch["edit_inner"][0]['labels'][
+                                                'attention_mask'],
+                                            s_batch["edit_inner"][0]['labels'],
+                                            s_batch["edit_inner"][0]['left_context_ps'],
+                                            s_batch["edit_inner"][0]['right_context_ps']
+                                        )
 
                                     results_specificity.append(
                                         # {'pre': s_pre_perp_loss[0],
