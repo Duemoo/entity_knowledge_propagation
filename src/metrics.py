@@ -187,7 +187,10 @@ def compute_perplexity_llama(tokenizer, logits, label_ids, label_attention_mask,
             as_tuple=True)[0]
         right_len = \
         (right_context_tsr['input_ids'][0] == tokenizer.eos_token_id).nonzero(
-            as_tuple=True)[0]-2
+            as_tuple=True)[0]-1
+        # print('#################################\n', right_context_tsr['input_ids'][0][1].item(), '\n#######################################')
+        if right_context_tsr['input_ids'][0][1].item()==29871:
+            right_len -= 1
         start_loc = left_len
         span_len = total_len - left_len - right_len
 
@@ -205,16 +208,7 @@ def compute_perplexity_llama(tokenizer, logits, label_ids, label_attention_mask,
                 )
         )
 
-        if True:
-        # if not loss_per_token:
-            # print('full label')
-            # print(labels_tsr['input_ids'][0])
-            # print('left_context_tsr')
-            # print(left_context_tsr['input_ids'][0])
-            # print('right_context_tsr')
-            # print(right_context_tsr['input_ids'][0])
-            # len_match=labels_tsr['input_ids'][0].size(0)==left_context_tsr['input_ids'][0].size(0)+right_context_tsr['input_ids'][0]-1
-            # print(f'\nlen_match: {len_match}\n')
+        if not loss_per_token:
             print()
             print(total_len, left_len, right_len, start_loc, end_loc)
             print(tokenizer.convert_ids_to_tokens(labels_tsr['input_ids'][i]))

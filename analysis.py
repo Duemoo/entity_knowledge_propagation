@@ -108,22 +108,30 @@ def measure_ppl_drop(per_exs, measure_indices, exclude_pop, remove_ouliers=True)
     assert len(per_exs)==1
     per_ex = per_exs[0]
     avg_ppl_drop_per_ex = []
-    avg_ppl_fluc_per_ex = []
+    avg_ppl_fluc_stdev_per_ex = []
+    avg_ppl_fluc_abs_per_ex = []
     overall_ppl_drop_per_ex = []
-    learn_success_count = 0
+    forget_ratio_per_ex = []
+    
     for idx, data in enumerate(per_ex.items()):
         if 'pop' in data[0] and exclude_pop:
             continue
-        if idx in measure_indices:
+        if idx in measure_indices and idx < 114:
             ppl_drop_on_train = []
             ppl_fluc_not_on_train = []
+            forget_ratio = []
             train_idx = data[1]['trained_at']
             ppl = data[1]['ppl']
+            cache = None
 
             for step in range(len(ppl)):
                 if step in train_idx:
                     if step!=0:
                         ppl_drop_on_train.append((1-ppl[step]/ppl[step-1])*100)
+                        if cache:
+                            forget_ratio.append((ppl[step-1]/cache-1)*100)
+                        cache = ppl[step]
+                        
                 else:
                     if step!=0:
                         ppl_fluc_not_on_train.append((1-ppl[step]/ppl[step-1])*100)
@@ -132,13 +140,18 @@ def measure_ppl_drop(per_exs, measure_indices, exclude_pop, remove_ouliers=True)
             if remove_outliers_iqr:
                 ppl_fluc_not_on_train = remove_outliers_iqr(ppl_fluc_not_on_train)
                 ppl_drop_on_train = remove_outliers_iqr(ppl_drop_on_train)
+                forget_ratio = remove_outliers_iqr(forget_ratio)
                 
             avg_ppl_drop_per_ex.append(sum(ppl_drop_on_train)/len(ppl_drop_on_train))
-            avg_ppl_fluc_per_ex.append(sum(ppl_fluc_not_on_train)/len(ppl_fluc_not_on_train))
+            avg_ppl_fluc_stdev_per_ex.append(statistics.pstdev(ppl_fluc_not_on_train))
+            avg_ppl_fluc_abs_per_ex.append(sum([abs(num) for num in ppl_fluc_not_on_train])/len(ppl_fluc_not_on_train))
             overall_ppl_drop_per_ex.append((1-ppl[-1]/ppl[0])*100)
+            forget_ratio_per_ex.append(sum(forget_ratio)/len(forget_ratio))
         
     avg_ppl_drop_on_train = sum(avg_ppl_drop_per_ex)/len(avg_ppl_drop_per_ex)
-    avg_ppl_fluc_not_on_train = statistics.pstdev(avg_ppl_fluc_per_ex)
+    avg_ppl_fluc_stdev_not_on_train = sum(avg_ppl_fluc_stdev_per_ex)/len(avg_ppl_fluc_stdev_per_ex)
+    avg_ppl_fluc_abs_not_on_train = sum(avg_ppl_fluc_abs_per_ex)/len(avg_ppl_fluc_abs_per_ex)
+    avg_forget_ratio = sum(forget_ratio_per_ex)/len(forget_ratio_per_ex)
     
     if remove_ouliers:
         overall_ppl_drop_per_ex = remove_outliers_iqr(overall_ppl_drop_per_ex)
@@ -147,7 +160,9 @@ def measure_ppl_drop(per_exs, measure_indices, exclude_pop, remove_ouliers=True)
     
     result = {
         'ppl_drop_on_train': (avg_ppl_drop_on_train, avg_ppl_drop_per_ex),
-        'ppl_fluc_not_on_train': (avg_ppl_fluc_not_on_train, avg_ppl_fluc_per_ex),
+        'ppl_fluc_stdev_not_on_train': (avg_ppl_fluc_stdev_not_on_train, avg_ppl_fluc_stdev_per_ex),
+        'ppl_fluc_abs_not_on_train': (avg_ppl_fluc_abs_not_on_train, avg_ppl_fluc_abs_per_ex),
+        'forget_ratio': (avg_forget_ratio, forget_ratio_per_ex),
         'overall_ppl_drop': avg_overall_ppl_drop
         }
     
@@ -225,14 +240,24 @@ def main(args):
     
     elif args.mode=='measure_scores':
         # measure_indices = list(range(len(per_ex)))
-        measure_indices = [1,3,5,7,8,9,11,15,16,17,20,22,23,25,26,27,29,30,31,32,34,37,39,40,41,43,44,45,46,47,49,51,53,54,55,59,60,62,65,66,70,71,73,76,82,83,84,85,86,89,91,92,97,98,103]
+        measure_indices = [
+            1, 3, 5, 7, 8, 9, 11, 15, 16, 17, \
+            20, 22, 23, 25, 26, 27, 29, 30, 31, 32, \
+            34, 37, 39, 40, 41, 43, 44, 45, 46, 47, \
+            49, 51, 53, 54, 55, 59, 60, 62, 65, 66, \
+            70, 71, 73, 76, 82, 83, 84, 85, 86, 89, \
+            91, 92, 97, 98, 103, 106, 110, 112, 113] # 59 samples
         result = measure_ppl_drop(per_exs, measure_indices, exclude_pop=True)
         # assert len(avg_ppl_drop_per_ex)==len(measure_indices)
         print(f"\n\n################################################################################\n \
                 avg_ppl_drop_per_ex:\n\n{result['ppl_drop_on_train'][1]}\n\n \
                 avg_ppl_drop: {result['ppl_drop_on_train'][0]} \
-                \n\navg_ppl_fluc_per_ex:\n\n{result['ppl_fluc_not_on_train'][1]}\n\n \
-                avg_ppl_fluc: {result['ppl_fluc_not_on_train'][0]}\n\n \
+                \n\navg_ppl_fluc_abs_per_ex:\n\n{result['ppl_fluc_abs_not_on_train'][1]}\n\n \
+                avg_ppl_fluc_abs: {result['ppl_fluc_abs_not_on_train'][0]}\n\n \
+                \n\navg_ppl_fluc_stdev_per_ex:\n\n{result['ppl_fluc_stdev_not_on_train'][1]}\n\n \
+                avg_ppl_fluc_stdev: {result['ppl_fluc_stdev_not_on_train'][0]}\n\n \
+                \n\navg_forget_ratio_per_ex:\n\n{result['forget_ratio'][1]}\n\n \
+                avg_forget_ratio: {result['forget_ratio'][0]}\n\n \
                 overall_ppl_drop: {result['overall_ppl_drop']} \
                 \n################################################################################\n\n")
         
