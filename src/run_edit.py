@@ -700,10 +700,10 @@ def run_edit_ecbd(data,
                     output = {'ex_id': ex['ex_id']}
 
                     batch = to_tsr(tokenizer, ex, device)
-                    bleu_score = batch['bleu_score']
-                    bert_score = batch['bert_score']
-                    bleurt_score = batch['bleurt_score']
-                    meteor_score = batch['meteor_score']
+                    # bleu_score = batch['bleu_score']
+                    # bert_score = batch['bert_score']
+                    # bleurt_score = batch['bleurt_score']
+                    # meteor_score = batch['meteor_score']
 
                     if edit_method == 'ft_per_ex':
                         pre_edit_logits, post_edit_logits, \
@@ -969,10 +969,10 @@ def run_edit_ecbd(data,
                     output['pre'] = pre_perp_loss[0] if edit_method!='ft' else None
                     output['post'] = post_perp_loss[0]
                     output['sim_scores'] = {
-                        'bleu_score': bleu_score,
-                        'bert_score': bert_score,
-                        'bleurt_score': bleurt_score,
-                        'meteor_score': meteor_score
+                        # 'bleu_score': bleu_score,
+                        # 'bert_score': bert_score,
+                        # 'bleurt_score': bleurt_score,
+                        # 'meteor_score': meteor_score
                     }
                     output['specificity'] = results_specificity
                     all_outputs.append(output)

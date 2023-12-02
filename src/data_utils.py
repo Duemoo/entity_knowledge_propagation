@@ -10,10 +10,10 @@ from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 
 
-BLEU = evaluate.load('bleu')
-BERT_SCORE = evaluate.load('bertscore')
-BLEURT = evaluate.load("bleurt", module_type="metric")
-METEOR = evaluate.load('meteor')
+# BLEU = evaluate.load('bleu')
+# BERT_SCORE = evaluate.load('bertscore')
+# BLEURT = evaluate.load("bleurt", module_type="metric")
+# METEOR = evaluate.load('meteor')
 
 CATEGORY_MAP = {
     'tv_show': 'TV show',
@@ -23,7 +23,9 @@ CATEGORY_MAP = {
 
 MEND_DIR = './src/mend'
 MEND_MODEL_DIR = './src/mend/trained_models'
-SPECIFICITY_DATA_PATH = './data/ecbd/validation.json'
+SPECIFICITY_DATA_PATH = './data/ecbd/custom_knowledge_validation.json'
+# SPECIFICITY_DATA_PATH = './data/ecbd/sanity_check.json'
+# SPECIFICITY_DATA_PATH = './data/ecbd/validation.json'
 # SPECIFICITY_DATA_PATH = './data/ecbd/specificity_popular_20np_20random.json'
 POPULAR_ENT_DATA_PATH = './data/ecbd/all_popular.json'
 
@@ -231,16 +233,16 @@ def to_tsr_gpt_ecbd(tokenizer, ex, device, prepend_def=False,
     cleaned_probe_sentences = [ps.strip(' <|endoftext|>') for ps in
                                probe_sentences]
 
-    _bleu_score = BLEU.compute(predictions=definition,
-                               references=cleaned_probe_sentences)
-    _bert_score = BERT_SCORE.compute(predictions=definition,
-                                     references=cleaned_probe_sentences,
-                                     lang='en',
-                                     device=device)
-    _bleurt_score = BLEURT.compute(predictions=definition,
-                                   references=cleaned_probe_sentences)
-    _meteor_score = METEOR.compute(predictions=definition,
-                                   references=cleaned_probe_sentences)
+    # _bleu_score = BLEU.compute(predictions=definition,
+    #                            references=cleaned_probe_sentences)
+    # _bert_score = BERT_SCORE.compute(predictions=definition,
+    #                                  references=cleaned_probe_sentences,
+    #                                  lang='en',
+    #                                  device=device)
+    # _bleurt_score = BLEURT.compute(predictions=definition,
+    #                                references=cleaned_probe_sentences)
+    # _meteor_score = METEOR.compute(predictions=definition,
+    #                                references=cleaned_probe_sentences)
 
     definition_tok = tokenizer(definition, padding=True, return_tensors="pt")
     def_label_tok = tokenizer(definition, padding=True, return_tensors="pt")
@@ -275,10 +277,10 @@ def to_tsr_gpt_ecbd(tokenizer, ex, device, prepend_def=False,
         "definition": def_,  # Locality
         "cond": None,
         "labels": None,
-        "bleu_score": _bleu_score,
-        "bert_score": _bert_score,
-        "bleurt_score": _bleurt_score,
-        "meteor_score": _meteor_score
+        "bleu_score": None,
+        "bert_score": None,
+        "bleurt_score": None,
+        "meteor_score": None
     }
 
     return dict_to(batch, device)
@@ -495,9 +497,9 @@ def write_results_ecbd(result_dict, data_file, write_to, model_name):
 
             f.write('BLEU Score : {:.2f}\n'.format(sim_scores['bleu_score']['bleu']))
             f.write('BERT Score : {:.2f}\n\n'.format(sim_scores['bert_score']['f1'][0]))
-            f.write('BLEURT Score : {:.2f}\n'.format(sim_scores[
-                                                         'bleurt_score'][
-                                                         'scores'][0]))
+            # f.write('BLEURT Score : {:.2f}\n'.format(sim_scores[
+            #                                              'bleurt_score'][
+            #                                              'scores'][0]))
             f.write('METEOR Score : {:.2f}\n\n'.format(sim_scores['meteor_score']['meteor']))
             deltas.append(diff)
 
@@ -574,9 +576,9 @@ def write_results_entity_inferences(result_dict, data_file, write_to,
                                                         'bleu']))
             f.write('BERT Score   : {:.2f}\n'.format(sim_scores['bert_score'][
                                                         'f1'][0]))
-            f.write('BLEURT Score : {:.2f}\n'.format(sim_scores[
-                                                         'bleurt_score'][
-                                                         'scores'][0]))
+            # f.write('BLEURT Score : {:.2f}\n'.format(sim_scores[
+            #                                              'bleurt_score'][
+            #                                              'scores'][0]))
             f.write('METEOR Score : {:.2f}\n\n'.format(sim_scores['meteor_score']['meteor']))
 
 

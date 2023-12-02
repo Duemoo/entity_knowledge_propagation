@@ -147,8 +147,8 @@ def compute_perplexity_gpt(tokenizer, logits, label_ids, label_attention_mask,
                 )
         )
 
-        if True:
-        # if not loss_per_token:
+        # if True:
+        if not loss_per_token:
             print(total_len, left_len, right_len, start_loc, end_loc)
             print(tokenizer.convert_ids_to_tokens(labels_tsr['input_ids'][i]))
             print(tokenizer.convert_ids_to_tokens(
@@ -209,6 +209,7 @@ def compute_perplexity_llama(tokenizer, logits, label_ids, label_attention_mask,
         )
 
         if not loss_per_token:
+        # if True:
             print()
             print(total_len, left_len, right_len, start_loc, end_loc)
             print(tokenizer.convert_ids_to_tokens(labels_tsr['input_ids'][i]))

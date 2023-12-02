@@ -37,7 +37,7 @@ def main(epoch, args):
     data_files = [
         # os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_500samples.json'),
         # os.path.join(data_dir, 'ecbd/all_ent_2020_2021_random_500samples.json')
-        os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_easy.json')
+        os.path.join(data_dir, 'ecbd/custom_knowledge_200.json')
     ]
 
     train_params = {
@@ -75,7 +75,7 @@ def main(epoch, args):
     for k, v in train_params.items():
         print('{:>24}: {}'.format(k, v))
 
-    device = torch.device("cuda:1")
+    device = torch.device("cuda:0")
     set_seed(train_params['SEED'])
 
     results_dict = run_edit.run_experiment(ki_method,
