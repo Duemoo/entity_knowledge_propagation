@@ -6,7 +6,7 @@ import pickle
 
 client = OpenAI(
     # defaults to os.environ.get("OPENAI_API_KEY")
-    api_key="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",
+    api_key="YOUR_API_KEY",
 )
 
 input_fname = "data/ecbd/all_ent_2020_2021_np_500samples.json"
