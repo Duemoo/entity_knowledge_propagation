@@ -35,9 +35,9 @@ def main(epoch, args):
     data_dir = os.path.join(ROOT_DIR, 'data')
 
     data_files = [
-        # os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_500samples.json'),
+        os.path.join(data_dir, 'ecbd/all_ent_2020_2021_np_easy.json'),
         # os.path.join(data_dir, 'ecbd/all_ent_2020_2021_random_500samples.json')
-        os.path.join(data_dir, 'ecbd/custom_knowledge_200.json')
+        # os.path.join(data_dir, 'ecbd/custom_knowledge_200.json')
     ]
 
     train_params = {

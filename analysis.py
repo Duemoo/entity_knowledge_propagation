@@ -60,9 +60,15 @@ def plot_ppl_with_trained_at(per_exs, key, exp_names, filename='plot.png'):
     # plt.plot(ppl, label='ppl values')
     
     # Mark the trained_at indices
-    plt.figure(figsize=(len(per_exs)*8, 5))
+    if len(per_exs)<=4:
+        plt.figure(figsize=(len(per_exs)*8, 5))
+    else:
+        plt.figure(figsize=(len(per_exs)*4, 10))
     for i in range(len(per_exs)):
-        plt.subplot(1, len(per_exs), i+1)
+        if len(per_exs)<=4:
+            plt.subplot(1, len(per_exs), i+1)
+        else:
+            plt.subplot(2, len(per_exs)//2, i+1)
         
         ppl, trained_at_index = ppls[i], trained_at_indices[i]
         plt.plot(ppl, label='ppl values')
@@ -100,7 +106,10 @@ def load_results(out_dir, exp_name):
     try:
         results = results['/data/hoyeon/entity_knowledge_propagation/data/ecbd/all_ent_2020_2021_np_easy.json']
     except:
-        results = results['/workspace/entity_knowledge_propagation/data/ecbd/all_ent_2020_2021_np_easy.json'] 
+        try:
+            results = results['/workspace/entity_knowledge_propagation/data/ecbd/all_ent_2020_2021_np_easy.json'] 
+        except:
+            results = results['/data/hoyeon/entity_knowledge_propagation/data/ecbd/custom_knowledge_200.json']
     return results
 
 
@@ -116,7 +125,7 @@ def measure_ppl_drop(per_exs, measure_indices, exclude_pop, remove_outliers=True
     for idx, data in enumerate(per_ex.items()):
         if 'pop' in data[0] and exclude_pop:
             continue
-        if idx in measure_indices and idx < 114:
+        if idx in measure_indices:
             ppl_drop_on_train = []
             ppl_fluc_not_on_train = []
             forget_ratio = []
@@ -173,13 +182,14 @@ def measure_ppl_drop(per_exs, measure_indices, exclude_pop, remove_outliers=True
 def main(args):
 
     # Filtered samples
-    measure_indices = [
-            1, 3, 5, 7, 8, 9, 11, 15, 16, 17, \
-            20, 22, 23, 25, 26, 27, 29, 30, 31, 32, \
-            34, 37, 39, 40, 41, 43, 44, 45, 46, 47, \
-            49, 51, 53, 54, 55, 59, 60, 62, 65, 66, \
-            70, 71, 73, 76, 82, 83, 84, 85, 86, 89, \
-            91, 92, 97, 98, 103, 106, 110, 112, 113] # 59 examples
+    # measure_indices = [
+    #         1, 3, 5, 7, 8, 9, 11, 15, 16, 17, \
+    #         20, 22, 23, 25, 26, 27, 29, 30, 31, 32, \
+    #         34, 37, 39, 40, 41, 43, 44, 45, 46, 47, \
+    #         49, 51, 53, 54, 55, 59, 60, 62, 65, 66, \
+    #         70, 71, 73, 76, 82, 83, 84, 85, 86, 89, \
+    #         91, 92, 97, 98, 103, 106, 110, 112, 113] # 59 examples
+    measure_indices = range(185)
 
     # Process data_file
     train_dataset = load_json(args.train_data)
@@ -228,7 +238,7 @@ def main(args):
             ex['ppl'] = new_ppl
             ex['trained_at'] = new_trained_at
             # print(len(new_ppl))
-            assert len(new_ppl)%65==0
+            # assert len(new_ppl)%65==0
             # assert len(new_trained_at)==5
         # print(per_ex)
         # print(train_idx)
@@ -251,14 +261,21 @@ def main(args):
         # measure_indices = list(range(len(per_ex)))
         result = measure_ppl_drop(per_exs, measure_indices, exclude_pop=True)
         # assert len(avg_ppl_drop_per_ex)==len(measure_indices)
+        # print(f"\n\n################################################################################\n \
+        #         avg_ppl_drop_per_ex:\n\n{result['ppl_drop_on_train'][1]}\n\n \
+        #         avg_ppl_drop: {result['ppl_drop_on_train'][0]} \
+        #         \n\navg_ppl_fluc_abs_per_ex:\n\n{result['ppl_fluc_abs_not_on_train'][1]}\n\n \
+        #         avg_ppl_fluc_abs: {result['ppl_fluc_abs_not_on_train'][0]}\n\n \
+        #         \n\navg_ppl_fluc_stdev_per_ex:\n\n{result['ppl_fluc_stdev_not_on_train'][1]}\n\n \
+        #         avg_ppl_fluc_stdev: {result['ppl_fluc_stdev_not_on_train'][0]}\n\n \
+        #         \n\navg_forget_ratio_per_ex:\n\n{result['forget_ratio'][1]}\n\n \
+        #         avg_forget_ratio: {result['forget_ratio'][0]}\n\n \
+        #         overall_ppl_drop: {result['overall_ppl_drop'][0]} \
+        #         \n################################################################################\n\n")
         print(f"\n\n################################################################################\n \
-                avg_ppl_drop_per_ex:\n\n{result['ppl_drop_on_train'][1]}\n\n \
-                avg_ppl_drop: {result['ppl_drop_on_train'][0]} \
-                \n\navg_ppl_fluc_abs_per_ex:\n\n{result['ppl_fluc_abs_not_on_train'][1]}\n\n \
+                avg_ppl_drop: {result['ppl_drop_on_train'][0]}\n\n \
                 avg_ppl_fluc_abs: {result['ppl_fluc_abs_not_on_train'][0]}\n\n \
-                \n\navg_ppl_fluc_stdev_per_ex:\n\n{result['ppl_fluc_stdev_not_on_train'][1]}\n\n \
                 avg_ppl_fluc_stdev: {result['ppl_fluc_stdev_not_on_train'][0]}\n\n \
-                \n\navg_forget_ratio_per_ex:\n\n{result['forget_ratio'][1]}\n\n \
                 avg_forget_ratio: {result['forget_ratio'][0]}\n\n \
                 overall_ppl_drop: {result['overall_ppl_drop'][0]} \
                 \n################################################################################\n\n")

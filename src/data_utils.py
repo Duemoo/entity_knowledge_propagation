@@ -23,9 +23,9 @@ CATEGORY_MAP = {
 
 MEND_DIR = './src/mend'
 MEND_MODEL_DIR = './src/mend/trained_models'
-SPECIFICITY_DATA_PATH = './data/ecbd/custom_knowledge_validation.json'
+# SPECIFICITY_DATA_PATH = './data/ecbd/custom_knowledge_validation.json'
 # SPECIFICITY_DATA_PATH = './data/ecbd/sanity_check.json'
-# SPECIFICITY_DATA_PATH = './data/ecbd/validation.json'
+SPECIFICITY_DATA_PATH = './data/ecbd/validation.json'
 # SPECIFICITY_DATA_PATH = './data/ecbd/specificity_popular_20np_20random.json'
 POPULAR_ENT_DATA_PATH = './data/ecbd/all_popular.json'
 

@@ -975,6 +975,7 @@ def run_edit_ecbd(data,
                         # 'meteor_score': meteor_score
                     }
                     output['specificity'] = results_specificity
+                    output['loss'] = loss
                     all_outputs.append(output)
                     # if not pre_perp_loss[0][1]:
                     #     print('WARNING')
